@@ -83,4 +83,7 @@ dependencies {
     // TODO 추후 ksp로 변경
 //    ksp(libs.dagger.compiler)
 //    ksp(libs.dagger.hilt.compiler)
+
+    // 시리얼 통신
+    implementation(libs.usb.serial)
 }
