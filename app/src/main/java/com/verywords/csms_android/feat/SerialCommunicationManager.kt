@@ -15,7 +15,6 @@ import com.verywords.csms_android.feat.model.DeviceInfo
 import com.verywords.csms_android.feat.model.ReceiveData
 import com.verywords.csms_android.utils.convertMillisToDateTime
 import com.verywords.csms_android.utils.log
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -24,14 +23,15 @@ object SerialCommunicationManager {
 
     private val INTENT_ACTION_GRANT_USB: String = "com.example.myapplication" + ".GRANT_USB"
 
-
     private val _deviceState: MutableStateFlow<List<DeviceInfo>> = MutableStateFlow(emptyList())
     val deviceState = _deviceState.asStateFlow()
 
-    private var job: Job? = null
+    val messages = MutableStateFlow<List<ReceiveData>>(emptyList())
+
     private var usbPermission: UsbPermission = UsbPermission.Unknown
 
     suspend fun searchConnectableUSBDevice(context: Context = App.context) {
+        _deviceState.emit(emptyList())
         val connectableDevices = mutableListOf<DeviceInfo>()
         val manager = context.getSystemService(Context.USB_SERVICE) as UsbManager
         val usbDefaultProber = UsbSerialProber.getDefaultProber()
@@ -61,38 +61,6 @@ object SerialCommunicationManager {
         }
     }
 
-//    private fun hasUsbPermission(
-//        deviceInfo: DeviceInfo
-//    ) {
-//        object : BroadcastReceiver() {
-//            override fun onReceive(context: Context?, intent: Intent?) {
-//                if (HomeViewModel.INTENT_ACTION_GRANT_USB == intent!!.action) {
-////                    val usbPermission: UsbPermission = UsbPermission.Unknown
-//                    val usbPermission =
-//                        if (intent.getBooleanExtra(
-//                                UsbManager.EXTRA_PERMISSION_GRANTED,
-//                                false,
-//                            )
-//                        ) {
-//                            UsbPermission.Granted
-//                        } else {
-//                            UsbPermission.Denied
-//                        }
-//
-//                    if(usbPermission != UsbPermission.Granted){
-//                        val flags =
-//                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_MUTABLE else 0
-//                        val intent = Intent(HomeViewModel.INTENT_ACTION_GRANT_USB)
-//                        intent.setPackage(context.packageName)
-//                        val usbPermissionIntent: PendingIntent =
-//                            PendingIntent.getBroadcast(context, 0, intent, flags)
-//                        usbManager.requestPermission(connectDevice.device, usbPermissionIntent)
-//                    }
-//                }
-//            }
-//        }
-//    }
-
     private fun requestDeviceUsbPermission(
         context: Context = App.context,
         usbManager: UsbManager,
@@ -111,9 +79,6 @@ object SerialCommunicationManager {
     suspend fun connect(
         context: Context = App.context,
         connectDevice: DeviceInfo,
-        dataBits: Int = 8,
-        stopBits: Int = 1,
-        parity: Int = UsbSerialPort.PARITY_NONE
     ) {
         log(message = "connect call")
         val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
@@ -139,7 +104,12 @@ object SerialCommunicationManager {
             val usbSerialPort = connectDevice.usbSerialPort
             usbSerialPort.open(usbConnection)
             try {
-                usbSerialPort.setParameters(connectDevice.baudRate, dataBits, stopBits, parity)
+                usbSerialPort.setParameters(
+                    connectDevice.baudRate,
+                    connectDevice.dataBits,
+                    connectDevice.stopBits,
+                    connectDevice.parity
+                )
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -212,9 +182,57 @@ object SerialCommunicationManager {
 
         updateState(
             targetDevice = deviceInfo.copy(
-                message = deviceInfo.message + message
+                message = deviceInfo.message + message,
+                lastReceiveMessage = message
             )
         )
+
+        messages.update { messages ->
+            messages + message
+        }
+    }
+
+    fun sendData(
+        sendData: String,
+        usbSerialPort: UsbSerialPort
+    ) {
+        try {
+//            val data = (sendData + '\n').toByteArray()
+
+
+//            val data = byteArrayOf(
+//                101, 49, 56, 48, 54, 100,
+//                52, // D0 값 48
+//                102, 52, 56, 102, 102, 102, 102,
+//                48, 49, 102, 102, 102, 102, 102,
+//                102, 102, 102, 102, 13
+//            )
+            val data =
+                ("101,49,56,48,54,100,48,102,52,56,102,102,102,102,102,102,48,49,102,102,102,102,48,48,102,102,13").toByteArray()
+//            log(message = "data: ${HexDump.dumpHexString(data)}")
+//            val spn = SpannableStringBuilder()
+//            spn.append("send " + data.size + " bytes\n")
+//            spn.append(HexDump.dumpHexString(data)).append("\n")
+            usbSerialPort.write(
+                data,
+                2000
+            )
+            val response = ByteArray(30)
+            val bytesRead = usbSerialPort.read(response, response.size, 2000)
+            if (bytesRead > 0) {
+                log(message = "Response received: ${HexDump.dumpHexString(response)}")
+            } else {
+                log(message = "No response received.")
+            }
+        } catch (e: java.lang.Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun clearMessages() {
+        messages.update {
+            emptyList()
+        }
     }
 
     fun updateState(targetDevice: DeviceInfo) {

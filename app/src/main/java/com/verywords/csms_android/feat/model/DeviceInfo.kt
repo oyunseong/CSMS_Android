@@ -3,6 +3,7 @@ package com.verywords.csms_android.feat.model
 import android.hardware.usb.UsbDevice
 import com.hoho.android.usbserial.driver.UsbSerialDriver
 import com.hoho.android.usbserial.driver.UsbSerialPort
+import com.hoho.android.usbserial.driver.UsbSerialPort.Parity
 import com.hoho.android.usbserial.util.SerialInputOutputManager
 
 data class DeviceInfo(
@@ -14,5 +15,9 @@ data class DeviceInfo(
     val isConnected: Boolean = false,
     val usbIoManager: SerialInputOutputManager? = null,
     val message: List<ReceiveData> = emptyList(),
-    val baudRate : Int = 19200,
+    val lastReceiveMessage: ReceiveData = ReceiveData(),
+    val baudRate: Int = 19200,
+    val dataBits: Int = 8,
+    val stopBits: Int = 1,
+    @Parity val parity: Int = UsbSerialPort.PARITY_NONE,
 )
