@@ -30,26 +30,21 @@ class HomeViewModel @Inject constructor(
         log(message = "HomeViewModel init")
         searchDevice()
         viewModelScope.launch {
-            serialManager.messages.collect{
+            serialManager.messages.collect {
                 messages.emit(it)
             }
         }
-
-
-//        viewModelScope.launch {
-//            serialManager.deviceState.collect { deviceStates ->
-//                deviceStates.forEach { deviceState ->
-//                    deviceState.lastReceiveMessage.let { newMessage ->
-//                        val updatedMessages = messages.value.toMutableList()
-//                        updatedMessages.add(newMessage)
-//                        messages.emit(updatedMessages)
-//                    }
-//                }
-//            }
-//        }
     }
 
-    fun onClearMessages(){
+    fun toggleConnectDevice(deviceInfo: DeviceInfo) {
+        if (deviceInfo.isConnected) {   // 연결 돼 있으면 해제.
+            disconnectDevice(deviceInfo)
+        } else {
+            connectDevice(deviceInfo = deviceInfo)
+        }
+    }
+
+    fun onClearMessages() {
         viewModelScope.launch {
             serialManager.clearMessages()
         }
@@ -61,13 +56,9 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun connectDevice(
-        context: Context,
-        deviceInfo: DeviceInfo,
-    ) {
+    fun connectDevice(deviceInfo: DeviceInfo) {
         viewModelScope.launch {
             serialManager.connect(
-                context = context,
                 connectDevice = deviceInfo,
             )
         }
@@ -79,10 +70,42 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+
     fun sendMessage(deviceInfo: DeviceInfo) {
         viewModelScope.launch {
+            val val1: Byte = 49
+            val bytes = byteArrayOf(
+                101,
+                49,
+                56,
+                48,
+                54,
+                100,
+                val1,
+                102,
+                52,
+                56,
+                102,
+                102,
+                102,
+                102,
+                48,
+                49,
+                102,
+                102,
+                102,
+                102,
+                102,
+                102,
+                102,
+                102,
+                102,
+                102,
+                13
+            )
             serialManager.sendData(
-                sendData = "101,49,56,48,54,100,D0,102,52,56,102,102,102,102,102,102,48,49,102,102,102,102,48,48,102,102,13",
+//                request = bytes,
+                requestASCII = deviceInfo.inputText,
                 usbSerialPort = deviceInfo.usbSerialPort
             )
         }
@@ -92,9 +115,5 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             serialManager.updateState(targetDevice = deviceInfo)
         }
-    }
-
-    companion object {
-        private val INTENT_ACTION_GRANT_USB: String = "com.example.myapplication" + ".GRANT_USB"
     }
 }

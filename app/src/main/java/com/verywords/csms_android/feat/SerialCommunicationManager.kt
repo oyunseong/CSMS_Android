@@ -15,19 +15,22 @@ import com.verywords.csms_android.feat.model.DeviceInfo
 import com.verywords.csms_android.feat.model.ReceiveData
 import com.verywords.csms_android.utils.convertMillisToDateTime
 import com.verywords.csms_android.utils.log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import java.io.IOException
+
+const val INTENT_ACTION_GRANT_USB: String = "com.example.myapplication" + ".GRANT_USB"
 
 object SerialCommunicationManager {
-
-    private val INTENT_ACTION_GRANT_USB: String = "com.example.myapplication" + ".GRANT_USB"
-
     private val _deviceState: MutableStateFlow<List<DeviceInfo>> = MutableStateFlow(emptyList())
     val deviceState = _deviceState.asStateFlow()
 
     val messages = MutableStateFlow<List<ReceiveData>>(emptyList())
-
     private var usbPermission: UsbPermission = UsbPermission.Unknown
 
     suspend fun searchConnectableUSBDevice(context: Context = App.context) {
@@ -52,10 +55,6 @@ object SerialCommunicationManager {
                 }
             }
         }
-
-        connectableDevices.forEach {
-            log(message = "items: $it")
-        }
         _deviceState.update {
             connectableDevices
         }
@@ -75,12 +74,10 @@ object SerialCommunicationManager {
         usbManager.requestPermission(deviceInfo.device, usbPermissionIntent)
     }
 
-
-    suspend fun connect(
+    fun connect(
         context: Context = App.context,
         connectDevice: DeviceInfo,
     ) {
-        log(message = "connect call")
         val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
         val usbConnection: UsbDeviceConnection? = usbManager.openDevice(connectDevice.device)
 
@@ -89,14 +86,12 @@ object SerialCommunicationManager {
             && !usbManager.hasPermission(connectDevice.device)
         ) {
             usbPermission = UsbPermission.Requested
-            val time = System.currentTimeMillis()
-            log(message = "request permission start $time")
+
             requestDeviceUsbPermission(
                 context = context,
                 usbManager = usbManager,
                 deviceInfo = connectDevice
             )
-            log(message = "request permission end ${time - System.currentTimeMillis()}")
             return
         }
 
@@ -104,6 +99,8 @@ object SerialCommunicationManager {
             val usbSerialPort = connectDevice.usbSerialPort
             usbSerialPort.open(usbConnection)
             try {
+                usbSerialPort.dtr = true
+                usbSerialPort.rts = true
                 usbSerialPort.setParameters(
                     connectDevice.baudRate,
                     connectDevice.dataBits,
@@ -118,7 +115,15 @@ object SerialCommunicationManager {
                     usbSerialPort,
                     object : SerialInputOutputManager.Listener {
                         override fun onNewData(data: ByteArray?) {
-                            log(message = "byteArray ${data.contentToString()}")
+                            deviceState.value.forEach {
+                                if (it.device == connectDevice.device) {
+                                    receiveData(
+                                        data = data ?: byteArrayOf(),
+                                        deviceInfo = it
+                                    )
+                                }
+                            }
+
                             deviceState.value.forEach {
                                 if (it.device == connectDevice.device) {
                                     receiveData(
@@ -142,12 +147,10 @@ object SerialCommunicationManager {
                     )
                 )
             }
-
         } catch (e: Exception) {
             disconnect(connectedDevice = connectDevice)
         }
     }
-
 
     fun disconnect(connectedDevice: DeviceInfo) {
         if (!connectedDevice.isConnected) return
@@ -164,22 +167,19 @@ object SerialCommunicationManager {
                     usbIoManager = usbIoManager
                 )
             )
-            "disconnect success device : ${connectedDevice.device.productName}"
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
     private fun receiveData(data: ByteArray, deviceInfo: DeviceInfo) {
-        val state = deviceInfo.usbIoManager?.state
-        if (state != SerialInputOutputManager.State.RUNNING) return
+        if (deviceInfo.usbIoManager?.state != SerialInputOutputManager.State.RUNNING) return
+
         val message = ReceiveData(
             time = System.currentTimeMillis(),
             size = data.size,
             data = HexDump.dumpHexString(data) ?: "known data",
         )
-        log(message = "receiveData: ${convertMillisToDateTime(message.time)}  message : ${message.data}")
-
         updateState(
             targetDevice = deviceInfo.copy(
                 message = deviceInfo.message + message,
@@ -192,42 +192,31 @@ object SerialCommunicationManager {
         }
     }
 
+    //    private var job: Job? = null
     fun sendData(
-        sendData: String,
+//        request: ByteArray,
+        requestASCII: String,
         usbSerialPort: UsbSerialPort
     ) {
-        try {
-//            val data = (sendData + '\n').toByteArray()
-
-
-//            val data = byteArrayOf(
-//                101, 49, 56, 48, 54, 100,
-//                52, // D0 값 48
-//                102, 52, 56, 102, 102, 102, 102,
-//                48, 49, 102, 102, 102, 102, 102,
-//                102, 102, 102, 102, 13
-//            )
-            val data =
-                ("101,49,56,48,54,100,48,102,52,56,102,102,102,102,102,102,48,49,102,102,102,102,48,48,102,102,13").toByteArray()
-//            log(message = "data: ${HexDump.dumpHexString(data)}")
-//            val spn = SpannableStringBuilder()
-//            spn.append("send " + data.size + " bytes\n")
-//            spn.append(HexDump.dumpHexString(data)).append("\n")
-            usbSerialPort.write(
-                data,
-                2000
-            )
-            val response = ByteArray(30)
-            val bytesRead = usbSerialPort.read(response, response.size, 2000)
-            if (bytesRead > 0) {
-                log(message = "Response received: ${HexDump.dumpHexString(response)}")
-            } else {
-                log(message = "No response received.")
+        var job: Job? = null
+        job = CoroutineScope(Dispatchers.IO).launch {
+            val request = (requestASCII + "\r").toByteArray()
+//            val data = ("e1806d1f48ffff01fffffffff" +"\r").toByteArray()
+//            val data2 = ("e1806d1f48ffff08fffffffff" +"\r").toByteArray()
+            try {
+                usbSerialPort.write(request, 2000)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        } catch (e: java.lang.Exception) {
-            e.printStackTrace()
+        }
+
+        job.invokeOnCompletion {
+            job?.cancel()
+            job = null
+            log(message = "job cancel")
         }
     }
+
 
     fun clearMessages() {
         messages.update {

@@ -16,6 +16,7 @@ data class DeviceInfo(
     val usbIoManager: SerialInputOutputManager? = null,
     val message: List<ReceiveData> = emptyList(),
     val lastReceiveMessage: ReceiveData = ReceiveData(),
+    val inputText: String = "",
     val baudRate: Int = 19200,
     val dataBits: Int = 8,
     val stopBits: Int = 1,

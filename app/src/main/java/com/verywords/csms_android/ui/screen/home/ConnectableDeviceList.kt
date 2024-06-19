@@ -21,10 +21,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
@@ -33,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.driver.UsbSerialPort.Parity
 import com.verywords.csms_android.feat.model.DeviceInfo
+import com.verywords.csms_android.ui.common.ChatTextField
 import com.verywords.csms_android.ui.common.HorizontalSpacer
 import com.verywords.csms_android.ui.common.VerticalSpacer
 import com.verywords.csms_android.ui.theme.ableButton
@@ -47,6 +45,7 @@ fun ConnectableDeviceList(
     onBaudRateSelected: (DeviceInfo) -> Unit,
     sendMessage: (DeviceInfo) -> Unit,
     onClickParity: (DeviceInfo) -> Unit,
+    onChangeInputText : (DeviceInfo) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -56,39 +55,66 @@ fun ConnectableDeviceList(
         item { VerticalSpacer(dp = 8.dp) }
         items(deviceInfoList.size) { index ->
             val currentDevice = deviceInfoList[index]
-            DeviceItem(
-                name = currentDevice.device.deviceName,
-                isConnected = currentDevice.isConnected,
-                onClick = {
-                    onClick.invoke(currentDevice)
-                },
-                onBaudRateSelected = {
-                    onBaudRateSelected.invoke(
-                        currentDevice.copy(
-                            baudRate = it
-                        )
-                    )
-                },
-                sendMessage = {
-                    sendMessage.invoke(deviceInfoList[index])
-                },
-                onClickParity = {
-                    onClickParity.invoke(
-                        currentDevice.copy(
-                            parity = if (currentDevice.parity == UsbSerialPort.PARITY_NONE) {
-                                UsbSerialPort.PARITY_EVEN
-                            } else {
-                                UsbSerialPort.PARITY_NONE
-                            }
+            val serialNumber =
+                if (currentDevice.isConnected) currentDevice.device.serialNumber else ""
 
-                        )
-                    )
+            DeviceItem(
+                name = "${currentDevice.device.deviceName} : $serialNumber",
+                isConnected = currentDevice.isConnected,
+                baundRate = currentDevice.baudRate,
+                inputText = currentDevice.inputText,
+                parity = currentDevice.parity,
+                uiEvent = {
+                    when (it) {
+                        is DeviceItemUiEvent.OnUiBaudRate -> {
+                            onBaudRateSelected.invoke(
+                                currentDevice.copy(
+                                    baudRate = it.baudRate
+                                )
+                            )
+                        }
+
+                        DeviceItemUiEvent.OnUiContainer -> {
+                            onClick.invoke(currentDevice)
+                        }
+
+                        DeviceItemUiEvent.OnUiParity -> {
+                            onClickParity.invoke(
+                                currentDevice.copy(
+                                    parity = if (currentDevice.parity == UsbSerialPort.PARITY_NONE) {
+                                        UsbSerialPort.PARITY_EVEN
+                                    } else {
+                                        UsbSerialPort.PARITY_NONE
+                                    }
+                                )
+                            )
+                        }
+
+                        is DeviceItemUiEvent.OnUiSendMessage -> {
+                            sendMessage.invoke(currentDevice)
+                        }
+
+                        is DeviceItemUiEvent.ChangeInputText -> {
+                            onChangeInputText.invoke(
+                                currentDevice.copy(
+                                    inputText = it.text
+                                )
+                            )
+                        }
+                    }
                 },
-                parity = currentDevice.parity
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
+}
+
+sealed class DeviceItemUiEvent {
+    data object OnUiContainer : DeviceItemUiEvent()
+    data object OnUiParity : DeviceItemUiEvent()
+    data class OnUiBaudRate(val baudRate: Int) : DeviceItemUiEvent()
+    data object OnUiSendMessage : DeviceItemUiEvent()
+    data class ChangeInputText(val text: String) : DeviceItemUiEvent()
 }
 
 @Composable
@@ -96,18 +122,15 @@ fun DeviceItem(
     name: String,
     isConnected: Boolean,
     @Parity parity: Int,
-    onClick: () -> Unit = {},
-    onBaudRateSelected: (Int) -> Unit = {},
-    sendMessage: () -> Unit = {},
-    onClickParity: () -> Unit = {},
+    baundRate: Int = 9600, //
+    inputText: String = "",
+    uiEvent: (DeviceItemUiEvent) -> Unit = {}
 ) {
-    var selectedBaudRate by remember { mutableStateOf(9600) }
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                onClick.invoke()
+                uiEvent.invoke(DeviceItemUiEvent.OnUiContainer)
             },
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -132,14 +155,29 @@ fun DeviceItem(
             )
             Spacer(modifier = Modifier.height(8.dp))
             if (isConnected) {
-                Button(
-                    onClick = { sendMessage.invoke() },
-                    shape = RoundedCornerShape(6.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = ableButton,
-                    ),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "메시지 전송")
+                    ChatTextField(
+                        modifier = Modifier.weight(1f),
+                        value = inputText,
+                        onValueChange = {
+                            uiEvent.invoke(DeviceItemUiEvent.ChangeInputText(text = it))
+                        }
+                    )
+                    HorizontalSpacer(dp = 8.dp)
+                    Button(
+                        onClick = {
+                            uiEvent.invoke(DeviceItemUiEvent.OnUiSendMessage)
+                        },
+                        shape = RoundedCornerShape(6.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ableButton,
+                        ),
+                    ) {
+                        Text(text = "Send")
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -152,13 +190,12 @@ fun DeviceItem(
                     Button(
                         modifier = Modifier,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (selectedBaudRate == baudRate) ableButton else disableButton,
+                            containerColor = if (baundRate == baudRate) ableButton else disableButton,
                         ),
                         shape = RoundedCornerShape(6.dp),
                         onClick = {
                             if (!isConnected) {
-                                selectedBaudRate = baudRate
-                                onBaudRateSelected(baudRate)
+                                uiEvent.invoke(DeviceItemUiEvent.OnUiBaudRate(baudRate))
                             }
                         },
                     ) {
@@ -182,7 +219,7 @@ fun DeviceItem(
                     shape = RoundedCornerShape(6.dp),
                     onClick = {
                         if (!isConnected) {
-                            onClickParity.invoke()
+                            uiEvent.invoke(DeviceItemUiEvent.OnUiParity)
                         }
                     },
                 ) {
