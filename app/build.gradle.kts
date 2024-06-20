@@ -86,4 +86,10 @@ dependencies {
 
     // 시리얼 통신
     implementation(libs.usb.serial)
+
+    // Room
+    implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.room.runtime)
+    annotationProcessor(libs.androidx.room)
+    ksp(libs.androidx.room)
 }

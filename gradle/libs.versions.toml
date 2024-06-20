@@ -14,6 +14,7 @@ hilt = "2.46"
 ksp = "1.9.0-1.0.12"
 navigationComposeVersion = "2.7.7"
 usbSerial = "3.7.3"
+room = "2.6.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -37,6 +38,9 @@ dagger-hilt = { group = "com.google.dagger", name = "hilt-android", version.ref 
 dagger-hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
 dagger-compiler = { group = "com.google.dagger", name = "dagger-compiler", version.ref = "hilt" }
 usb-serial = { group = "com.github.mik3y", name = "usb-serial-for-android", version.ref = "usbSerial" }
+androidx-room = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

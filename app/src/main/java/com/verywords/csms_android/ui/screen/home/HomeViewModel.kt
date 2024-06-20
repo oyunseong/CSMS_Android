@@ -3,9 +3,11 @@ package com.verywords.csms_android.ui.screen.home
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.verywords.csms_android.data.local.repository.MessageRepository
 import com.verywords.csms_android.feat.SerialCommunicationManager
 import com.verywords.csms_android.feat.model.SerialDevice
 import com.verywords.csms_android.feat.model.ReceiveData
+import com.verywords.csms_android.utils.log
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.delay
@@ -15,6 +17,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
+    private val messageRepository: MessageRepository
 ) : ViewModel() {
     val serialManager: SerialCommunicationManager = SerialCommunicationManager
     val messages: MutableStateFlow<List<ReceiveData>> = MutableStateFlow(emptyList())
@@ -24,6 +27,17 @@ class HomeViewModel @Inject constructor(
         }
 
     init {
+        viewModelScope.launch(coroutineExceptionHandler) {
+            val a = messageRepository.getMessages()
+            if(a.isNotEmpty()){
+                a.forEach {
+                    log(message = "it : $it")
+                }
+            }else{
+                log(message = "a is empty")
+            }
+        }
+
         searchDevice()
         collectMessages(delayDuration = 1000)
     }
