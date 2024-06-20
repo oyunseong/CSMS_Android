@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.driver.UsbSerialPort.Parity
-import com.verywords.csms_android.feat.model.DeviceInfo
+import com.verywords.csms_android.feat.model.SerialDevice
 import com.verywords.csms_android.ui.common.ChatTextField
 import com.verywords.csms_android.ui.common.HorizontalSpacer
 import com.verywords.csms_android.ui.common.VerticalSpacer
@@ -38,14 +38,22 @@ import com.verywords.csms_android.ui.theme.disableButton
 import com.verywords.csms_android.ui.theme.disableColor
 import com.verywords.csms_android.ui.theme.mainColor
 
+sealed interface DeviceItemUiEvent {
+    data object OnUiContainer : DeviceItemUiEvent
+    data object OnUiParity : DeviceItemUiEvent
+    data class OnUiBaudRate(val baudRate: Int) : DeviceItemUiEvent
+    data object OnUiSendMessage : DeviceItemUiEvent
+    data class ChangeInputText(val text: String) : DeviceItemUiEvent
+}
+
 @Composable
 fun ConnectableDeviceList(
-    deviceInfoList: List<DeviceInfo>,
-    onClick: (deviceInfo: DeviceInfo) -> Unit,
-    onBaudRateSelected: (DeviceInfo) -> Unit,
-    sendMessage: (DeviceInfo) -> Unit,
-    onClickParity: (DeviceInfo) -> Unit,
-    onChangeInputText : (DeviceInfo) -> Unit,
+    serialDeviceList: List<SerialDevice>,
+    onClick: (serialDevice: SerialDevice) -> Unit,
+    onBaudRateSelected: (SerialDevice) -> Unit,
+    sendMessage: (SerialDevice) -> Unit,
+    onClickParity: (SerialDevice) -> Unit,
+    onChangeInputText : (SerialDevice) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -53,8 +61,8 @@ fun ConnectableDeviceList(
             .padding(horizontal = 16.dp)
     ) {
         item { VerticalSpacer(dp = 8.dp) }
-        items(deviceInfoList.size) { index ->
-            val currentDevice = deviceInfoList[index]
+        items(serialDeviceList.size) { index ->
+            val currentDevice = serialDeviceList[index]
             val serialNumber =
                 if (currentDevice.isConnected) currentDevice.device.serialNumber else ""
 
@@ -109,14 +117,6 @@ fun ConnectableDeviceList(
     }
 }
 
-sealed class DeviceItemUiEvent {
-    data object OnUiContainer : DeviceItemUiEvent()
-    data object OnUiParity : DeviceItemUiEvent()
-    data class OnUiBaudRate(val baudRate: Int) : DeviceItemUiEvent()
-    data object OnUiSendMessage : DeviceItemUiEvent()
-    data class ChangeInputText(val text: String) : DeviceItemUiEvent()
-}
-
 @Composable
 fun DeviceItem(
     name: String,
@@ -162,6 +162,7 @@ fun DeviceItem(
                     ChatTextField(
                         modifier = Modifier.weight(1f),
                         value = inputText,
+                        hintText = "비어있음",
                         onValueChange = {
                             uiEvent.invoke(DeviceItemUiEvent.ChangeInputText(text = it))
                         }

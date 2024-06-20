@@ -20,8 +20,8 @@
             android:theme="@style/Theme.CSMS_Android">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
-
+<!--                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />-->
+                <action android:name="android.hardware.usb.action.USB_DEVICE_DETACHED"/>
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 

@@ -21,15 +21,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.verywords.csms_android.R
-import com.verywords.csms_android.feat.model.DeviceInfo
+import com.verywords.csms_android.feat.model.SerialDevice
 
 @Composable
 fun HomeScreen(
@@ -43,19 +41,19 @@ fun HomeScreen(
     Box(modifier = modifier) {
         HomeScreenContent(
             modifier = Modifier,
-            deviceInfoList = uiState,
+            serialDeviceList = uiState,
             uiEvent = {
                 when (it) {
                     is HomeUiEvent.ToggleConnectDevice -> {
-                        viewModel.toggleConnectDevice(it.deviceInfo)
+                        viewModel.toggleConnectDevice(it.serialDevice)
                     }
 
                     is HomeUiEvent.ChangeDeviceInfoState -> {
-                        viewModel.updateDeviceInfo(it.deviceInfo)
+                        viewModel.updateSerialDevice(it.serialDevice)
                     }
 
                     is HomeUiEvent.SendMessage -> {
-                        viewModel.sendMessage(it.deviceInfo)
+                        viewModel.sendAsciiMessage(it.serialDevice)
                     }
 
                     HomeUiEvent.Refresh -> {
@@ -70,7 +68,7 @@ fun HomeScreen(
                 modifier = Modifier,
                 messages = messages,
                 onClearMessages = {
-                    viewModel.onClearMessages()
+                    viewModel.clearMessages()
                 }
             )
         }
@@ -102,14 +100,14 @@ fun HomeScreen(
 @Composable
 fun HomeScreenContent(
     modifier: Modifier = Modifier,
-    deviceInfoList: List<DeviceInfo> = emptyList(),
+    serialDeviceList: List<SerialDevice> = emptyList(),
     uiEvent: (HomeUiEvent) -> Unit = {},
 ) {
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        if (deviceInfoList.isEmpty()) {
+        if (serialDeviceList.isEmpty()) {
             Text(
                 modifier = Modifier.align(Alignment.Center),
                 fontSize = 20.sp,
@@ -142,7 +140,7 @@ fun HomeScreenContent(
                     .background(Color.Gray)
             )
             ConnectableDeviceList(
-                deviceInfoList = deviceInfoList,
+                serialDeviceList = serialDeviceList,
                 onClick = {
                     uiEvent.invoke(HomeUiEvent.ToggleConnectDevice(it))
                 },
@@ -168,6 +166,6 @@ fun HomeScreenContent(
 @Composable
 fun HomeScreenPreview() {
     HomeScreenContent(
-        deviceInfoList = listOf()
+        serialDeviceList = listOf()
     )
 }

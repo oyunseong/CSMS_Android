@@ -1,11 +1,11 @@
 package com.verywords.csms_android.ui.screen.home
 
-import com.verywords.csms_android.feat.model.DeviceInfo
+import com.verywords.csms_android.feat.model.SerialDevice
 
 
-sealed class HomeUiEvent {
-    data class ToggleConnectDevice(val deviceInfo: DeviceInfo) : HomeUiEvent()
-    data class ChangeDeviceInfoState(val deviceInfo: DeviceInfo) : HomeUiEvent()
-    data class SendMessage(val deviceInfo: DeviceInfo) : HomeUiEvent()
-    data object Refresh : HomeUiEvent()
+sealed interface HomeUiEvent {
+    data class ToggleConnectDevice(val serialDevice: SerialDevice) : HomeUiEvent
+    data class ChangeDeviceInfoState(val serialDevice: SerialDevice) : HomeUiEvent
+    data class SendMessage(val serialDevice: SerialDevice) : HomeUiEvent
+    data object Refresh : HomeUiEvent
 }

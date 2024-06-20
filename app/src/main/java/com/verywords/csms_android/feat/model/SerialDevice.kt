@@ -6,7 +6,7 @@ import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.driver.UsbSerialPort.Parity
 import com.hoho.android.usbserial.util.SerialInputOutputManager
 
-data class DeviceInfo(
+data class SerialDevice(
     val port: Int,
     val device: UsbDevice,
     val driver: UsbSerialDriver,
@@ -14,8 +14,6 @@ data class DeviceInfo(
     val withIoManager: Boolean = true, // // read_modes[0]=event/io-manager, read_modes[1]=direct 필요시 추가
     val isConnected: Boolean = false,
     val usbIoManager: SerialInputOutputManager? = null,
-    val message: List<ReceiveData> = emptyList(),
-    val lastReceiveMessage: ReceiveData = ReceiveData(),
     val inputText: String = "",
     val baudRate: Int = 19200,
     val dataBits: Int = 8,
