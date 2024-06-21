@@ -1,4 +1,4 @@
-package com.verywords.csms_android.feat
+package com.verywords.csms_android.core.serial
 
 import android.app.PendingIntent
 import android.content.Context
@@ -13,8 +13,8 @@ import com.hoho.android.usbserial.driver.UsbSerialProber
 import com.hoho.android.usbserial.util.HexDump
 import com.hoho.android.usbserial.util.SerialInputOutputManager
 import com.verywords.csms_android.App
-import com.verywords.csms_android.feat.model.SerialDevice
-import com.verywords.csms_android.feat.model.ReceiveData
+import com.verywords.csms_android.core.serial.model.SerialDevice
+import com.verywords.csms_android.core.serial.model.SerialData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +29,7 @@ object SerialCommunicationManager {
     private val _deviceState: MutableStateFlow<List<SerialDevice>> = MutableStateFlow(emptyList())
     val deviceState = _deviceState.asStateFlow()
 
-    private val _messages = MutableStateFlow<List<ReceiveData>>(emptyList())
+    private val _messages = MutableStateFlow<List<SerialData>>(emptyList())
     val messages = _messages.asStateFlow()
 
     private const val TAG = "SerialCommunicationManager"
@@ -93,10 +93,7 @@ object SerialCommunicationManager {
                 usbSerialPort,
                 getSerialDataListener(connectDevice)
             )
-
-            if (connectDevice.withIoManager) {
-                usbIoManager.start()
-            }
+            usbIoManager.start()
             updateState(
                 connectDevice.copy(
                     isConnected = true,
@@ -205,7 +202,7 @@ object SerialCommunicationManager {
             return
         }
 
-        val lastMessage = ReceiveData(
+        val lastMessage = SerialData(
             time = System.currentTimeMillis(),
             size = data.size,
             data = HexDump.dumpHexString(data) ?: "known data",

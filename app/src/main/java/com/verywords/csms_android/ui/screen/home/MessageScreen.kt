@@ -22,7 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.verywords.csms_android.feat.model.ReceiveData
+import com.verywords.csms_android.core.serial.model.SerialData
 import com.verywords.csms_android.ui.common.VerticalSpacer
 import com.verywords.csms_android.ui.theme.mainColor
 import com.verywords.csms_android.utils.convertMillisToDateTime
@@ -31,11 +31,12 @@ import com.verywords.csms_android.utils.convertMillisToDateTime
 @Composable
 fun MessageScreen(
     modifier: Modifier = Modifier,
-    messages: List<ReceiveData>,
+    messages: List<SerialData>,
     onClearMessages: () -> Unit = {}
 ) {
     var isAutoScroll by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+
     LaunchedEffect(key1 = messages.size) {
         if (messages.isNotEmpty() && isAutoScroll) {
             listState.animateScrollToItem(messages.size - 1)
@@ -107,7 +108,7 @@ fun MessageScreen(
 @Composable
 fun MessageItem(
     modifier: Modifier = Modifier,
-    message: ReceiveData
+    message: SerialData
 ) {
     Column(
         modifier = modifier

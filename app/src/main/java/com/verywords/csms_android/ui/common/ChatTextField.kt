@@ -53,7 +53,7 @@ fun ChatTextField(
                 if (value.isEmpty()) {
                     Text(
                         text = hintText,
-                        style = TextStyle(fontSize = 16.sp)
+                        style = TextStyle(fontSize = 16.sp, color = Color.LightGray)
                     )
                 }
                 innerTextField()

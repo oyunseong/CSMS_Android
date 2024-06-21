@@ -26,12 +26,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.verywords.csms_android.Navigation
 import com.verywords.csms_android.R
-import com.verywords.csms_android.feat.model.SerialDevice
+import com.verywords.csms_android.core.serial.model.SerialDevice
+import com.verywords.csms_android.ui.common.VerticalSpacer
 
 @Composable
 fun HomeScreen(
     modifier: Modifier,
+    navigate: (String) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.serialManager.deviceState.collectAsState()
@@ -40,16 +43,16 @@ fun HomeScreen(
 
     Box(modifier = modifier) {
         HomeScreenContent(
-            modifier = Modifier,
+            modifier = Modifier.background(color = Color.White),
             serialDeviceList = uiState,
             uiEvent = {
                 when (it) {
                     is HomeUiEvent.ToggleConnectDevice -> {
-                        viewModel.toggleConnectDevice(it.serialDevice)
+                        viewModel.toggleDeviceConnection(it.serialDevice)
                     }
 
-                    is HomeUiEvent.ChangeDeviceInfoState -> {
-                        viewModel.updateSerialDevice(it.serialDevice)
+                    is HomeUiEvent.UpdateDeviceState -> {
+                        viewModel.updateDeviceState(it.serialDevice)
                     }
 
                     is HomeUiEvent.SendMessage -> {
@@ -58,6 +61,10 @@ fun HomeScreen(
 
                     HomeUiEvent.Refresh -> {
                         viewModel.searchDevice()
+                    }
+
+                    is HomeUiEvent.Navigation -> {
+                        navigate.invoke(it.route)
                     }
                 }
             },
@@ -68,7 +75,7 @@ fun HomeScreen(
                 modifier = Modifier,
                 messages = messages,
                 onClearMessages = {
-                    viewModel.clearMessages()
+                    viewModel.clearReceivedMessages()
                 }
             )
         }
@@ -96,7 +103,6 @@ fun HomeScreen(
 }
 
 
-
 @Composable
 fun HomeScreenContent(
     modifier: Modifier = Modifier,
@@ -111,7 +117,7 @@ fun HomeScreenContent(
             Text(
                 modifier = Modifier.align(Alignment.Center),
                 fontSize = 20.sp,
-                text = "연결 가능한 기기 없음"
+                text = "Not found device"
             )
         }
         Column(
@@ -123,20 +129,28 @@ fun HomeScreenContent(
                     .fillMaxWidth()
             ) {
                 Text(
-                    text = "기기 목록",
+                    text = "Device List",
                     fontSize = 24.sp
                 )
-                Button(
+                Column(
                     modifier = Modifier.align(Alignment.CenterEnd),
-                    onClick = { uiEvent.invoke(HomeUiEvent.Refresh) }) {
-                    Text(text = "refresh")
+                ) {
+                    Button(
+                        onClick = { uiEvent.invoke(HomeUiEvent.Refresh) }) {
+                        Text(text = "refresh")
+                    }
+                    VerticalSpacer(dp = 2.dp)
+                    Button(onClick = {
+                        uiEvent.invoke(HomeUiEvent.Navigation(Navigation.Routes.DatabaseScreen))
+                    }) {
+                        Text(text = "이동")
+                    }
                 }
             }
 
             Box(
                 modifier = Modifier
                     .height(2.dp)
-                    .fillMaxWidth()
                     .background(Color.Gray)
             )
             ConnectableDeviceList(
@@ -145,16 +159,16 @@ fun HomeScreenContent(
                     uiEvent.invoke(HomeUiEvent.ToggleConnectDevice(it))
                 },
                 onBaudRateSelected = {
-                    uiEvent.invoke(HomeUiEvent.ChangeDeviceInfoState(it))
+                    uiEvent.invoke(HomeUiEvent.UpdateDeviceState(it))
                 },
                 sendMessage = {
                     uiEvent.invoke(HomeUiEvent.SendMessage(it))
                 },
                 onChangeInputText = {
-                    uiEvent.invoke(HomeUiEvent.ChangeDeviceInfoState(it))
+                    uiEvent.invoke(HomeUiEvent.UpdateDeviceState(it))
                 },
                 onClickParity = {
-                    uiEvent.invoke(HomeUiEvent.ChangeDeviceInfoState(it))
+                    uiEvent.invoke(HomeUiEvent.UpdateDeviceState(it))
                 },
             )
         }

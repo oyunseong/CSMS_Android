@@ -1,7 +1,6 @@
 package com.verywords.csms_android.ui.screen.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.driver.UsbSerialPort.Parity
-import com.verywords.csms_android.feat.model.SerialDevice
+import com.verywords.csms_android.core.serial.model.SerialDevice
 import com.verywords.csms_android.ui.common.ChatTextField
 import com.verywords.csms_android.ui.common.HorizontalSpacer
 import com.verywords.csms_android.ui.common.VerticalSpacer
@@ -39,7 +38,7 @@ import com.verywords.csms_android.ui.theme.disableColor
 import com.verywords.csms_android.ui.theme.mainColor
 
 sealed interface DeviceItemUiEvent {
-    data object OnUiContainer : DeviceItemUiEvent
+    data object ToggleConnectEvent : DeviceItemUiEvent
     data object OnUiParity : DeviceItemUiEvent
     data class OnUiBaudRate(val baudRate: Int) : DeviceItemUiEvent
     data object OnUiSendMessage : DeviceItemUiEvent
@@ -53,7 +52,7 @@ fun ConnectableDeviceList(
     onBaudRateSelected: (SerialDevice) -> Unit,
     sendMessage: (SerialDevice) -> Unit,
     onClickParity: (SerialDevice) -> Unit,
-    onChangeInputText : (SerialDevice) -> Unit,
+    onChangeInputText: (SerialDevice) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -82,7 +81,7 @@ fun ConnectableDeviceList(
                             )
                         }
 
-                        DeviceItemUiEvent.OnUiContainer -> {
+                        DeviceItemUiEvent.ToggleConnectEvent -> {
                             onClick.invoke(currentDevice)
                         }
 
@@ -114,6 +113,9 @@ fun ConnectableDeviceList(
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
+        item {
+            VerticalSpacer(dp = 100.dp)
+        }
     }
 }
 
@@ -122,16 +124,13 @@ fun DeviceItem(
     name: String,
     isConnected: Boolean,
     @Parity parity: Int,
-    baundRate: Int = 9600, //
+    baundRate: Int = 9600,
     inputText: String = "",
     uiEvent: (DeviceItemUiEvent) -> Unit = {}
 ) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .clickable {
-                uiEvent.invoke(DeviceItemUiEvent.OnUiContainer)
-            },
+            .fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(
@@ -148,11 +147,20 @@ fun DeviceItem(
                 fontSize = 20.sp,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-            Text(
-                text = "connect : $isConnected",
-                fontSize = 16.sp,
-                color = if (isConnected) Color.Black else Color.Gray
-            )
+            Button(
+                modifier = Modifier,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = ableButton,
+                ),
+                shape = RoundedCornerShape(6.dp),
+                onClick = { uiEvent.invoke(DeviceItemUiEvent.ToggleConnectEvent) }) {
+                Text(
+                    text = "connect : $isConnected",
+                    fontSize = 16.sp,
+                    color = Color.White
+                )
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
             if (isConnected) {
                 Row(
@@ -162,7 +170,7 @@ fun DeviceItem(
                     ChatTextField(
                         modifier = Modifier.weight(1f),
                         value = inputText,
-                        hintText = "비어있음",
+                        hintText = "Enter Ascii Char",
                         onValueChange = {
                             uiEvent.invoke(DeviceItemUiEvent.ChangeInputText(text = it))
                         }

@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".App"
         android:allowBackup="true"
@@ -20,8 +22,7 @@
             android:theme="@style/Theme.CSMS_Android">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-<!--                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />-->
-                <action android:name="android.hardware.usb.action.USB_DEVICE_DETACHED"/>
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 

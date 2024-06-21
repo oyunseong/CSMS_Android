@@ -1,4 +1,4 @@
-package com.verywords
+package com.verywords.csms_android
 
 object Navigation {
 
